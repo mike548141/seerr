@@ -1366,6 +1366,8 @@
   "components.TitleCard.watchlistDeleted": "<strong>{title}</strong> Removed from watchlist  successfully!",
   "components.TitleCard.watchlistError": "Something went wrong. Please try again.",
   "components.TitleCard.watchlistSuccess": "<strong>{title}</strong> added to watchlist  successfully!",
+  "components.TvDetails.Season.availablesummary": "{available} of {aired} aired {aired, plural, one {episode} other {episodes}} available",
+  "components.TvDetails.Season.missing": "Missing",
   "components.TvDetails.Season.noepisodes": "Episode list unavailable.",
   "components.TvDetails.Season.somethingwentwrong": "Something went wrong while retrieving season data.",
   "components.TvDetails.Season.status4k": "4K {status}",
