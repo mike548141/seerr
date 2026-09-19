@@ -3,11 +3,12 @@ import RottenTomatoes from '@server/api/rating/rottentomatoes';
 import TheMovieDb from '@server/api/themoviedb';
 import { ANIME_KEYWORD_ID } from '@server/api/themoviedb/constants';
 import type { TmdbKeyword } from '@server/api/themoviedb/interfaces';
-import { MediaStatus, MediaType } from '@server/constants/media';
+import { MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
 import Media from '@server/entity/Media';
 import Season from '@server/entity/Season';
 import { Watchlist } from '@server/entity/Watchlist';
+import { getSeasonEpisodeAvailability } from '@server/lib/episodeAvailability';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { mapTvResult } from '@server/models/Search';
@@ -107,40 +108,32 @@ tvRoutes.get('/:id/season/:seasonNumber', async (req, res, next) => {
       });
 
       if (dbSeason) {
-        const trackedEpisodes = (dbSeason.episodes ?? []).filter(
-          (episode) =>
-            episode.status === MediaStatus.AVAILABLE ||
-            episode.status4k === MediaStatus.AVAILABLE
-        );
-        const metadataEpisodeNumbers = new Set(
-          season.episodes.map((episode) => episode.episode_number)
+        const episodeAvailability = getSeasonEpisodeAvailability(
+          dbSeason.episodes ?? [],
+          new Set(season.episodes.map((episode) => episode.episode_number))
         );
 
-        if (trackedEpisodes.length > 0 && metadataEpisodeNumbers.size > 0) {
-          const hasEpisodeNumberMismatch = trackedEpisodes.some(
-            (episode) => !metadataEpisodeNumbers.has(episode.episodeNumber)
-          );
-
-          if (hasEpisodeNumberMismatch) {
-            logger.warn(
-              'Skipping episode availability due to episode number mismatch',
-              {
-                label: 'API',
-                tvId: req.params.id,
-                seasonNumber: req.params.seasonNumber,
-                metadataEpisodeCount: metadataEpisodeNumbers.size,
-                trackedEpisodeCount: trackedEpisodes.length,
-              }
-            );
-          } else {
-            availableMap = {};
-            available4kMap = {};
-            for (const episode of trackedEpisodes) {
-              availableMap[episode.episodeNumber] =
-                episode.status === MediaStatus.AVAILABLE;
-              available4kMap[episode.episodeNumber] =
-                episode.status4k === MediaStatus.AVAILABLE;
+        if (episodeAvailability.result === 'mismatch') {
+          logger.warn(
+            'Skipping episode availability due to episode number mismatch',
+            {
+              label: 'API',
+              tvId: req.params.id,
+              seasonNumber: req.params.seasonNumber,
+              metadataEpisodeCount: season.episodes.length,
+              unknownEpisodeNumbers: episodeAvailability.unknownEpisodeNumbers,
             }
+          );
+        } else if (episodeAvailability.result === 'tracked') {
+          availableMap = episodeAvailability.available;
+          available4kMap = episodeAvailability.available4k;
+          if (episodeAvailability.unknownEpisodeNumbers.length > 0) {
+            logger.debug('Episodes not listed by the metadata provider', {
+              label: 'API',
+              tvId: req.params.id,
+              seasonNumber: req.params.seasonNumber,
+              unknownEpisodeNumbers: episodeAvailability.unknownEpisodeNumbers,
+            });
           }
         }
       }
