@@ -951,7 +951,7 @@ describe('Sonarr Scanner', () => {
       assert.strictEqual(episodes[1].status, MediaStatus.AVAILABLE);
     });
 
-    it('soft-deletes existing episodes when Sonarr reports hasFile false', async () => {
+    it('leaves an available episode for availabilitySync when Sonarr reports hasFile false', async () => {
       const mediaRepository = getRepository(Media);
       const episodeRepository = getRepository(Episode);
       const settings = getSettings();
@@ -1061,9 +1061,12 @@ describe('Sonarr Scanner', () => {
         order: { episodeNumber: 'ASC' },
       });
 
+      // Sonarr lacking a file is not proof the episode is gone: the media
+      // server may hold it. Only availabilitySync, which merges every source,
+      // may demote it.
       assert.strictEqual(episodes.length, 2);
       assert.strictEqual(episodes[0].status, MediaStatus.AVAILABLE);
-      assert.strictEqual(episodes[1].status, MediaStatus.DELETED);
+      assert.strictEqual(episodes[1].status, MediaStatus.AVAILABLE);
     });
 
     it('does not fetch or persist episodes when tracking is disabled', async () => {

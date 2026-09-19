@@ -712,33 +712,29 @@ class BaseScanner<T> {
         const existingEpisode = existingBySeasonAndNumber.get(key);
 
         if (existingEpisode) {
+          // A scanner only promotes. One source not having a file is not proof
+          // the episode is gone (Sonarr often lacks files the media server
+          // holds), so demotion is left to availabilitySync, which merges
+          // every source first. Same rule as seasons above.
           let changed = false;
           const statusField = is4k ? 'status4k' : 'status';
-          const currentStatus = existingEpisode[statusField];
 
-          if (episodeDetail.hasFile) {
-            existingEpisode[statusField] = MediaStatus.AVAILABLE;
-            changed = true;
-          } else if (
-            currentStatus !== MediaStatus.DELETED &&
-            currentStatus !== MediaStatus.UNKNOWN
+          if (
+            episodeDetail.hasFile &&
+            existingEpisode[statusField] !== MediaStatus.AVAILABLE
           ) {
-            existingEpisode[statusField] = MediaStatus.DELETED;
+            existingEpisode[statusField] = MediaStatus.AVAILABLE;
             changed = true;
           }
 
-          if (this.enable4kShow && episodeDetail.hasFile4k != null && !is4k) {
-            const currentStatus4k = existingEpisode.status4k;
-            if (episodeDetail.hasFile4k) {
-              existingEpisode.status4k = MediaStatus.AVAILABLE;
-              changed = true;
-            } else if (
-              currentStatus4k !== MediaStatus.DELETED &&
-              currentStatus4k !== MediaStatus.UNKNOWN
-            ) {
-              existingEpisode.status4k = MediaStatus.DELETED;
-              changed = true;
-            }
+          if (
+            this.enable4kShow &&
+            episodeDetail.hasFile4k &&
+            !is4k &&
+            existingEpisode.status4k !== MediaStatus.AVAILABLE
+          ) {
+            existingEpisode.status4k = MediaStatus.AVAILABLE;
+            changed = true;
           }
 
           if (changed) {
