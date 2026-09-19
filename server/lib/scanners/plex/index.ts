@@ -364,9 +364,12 @@ class PlexScanner
             total4k += 1;
           }
 
+          // hasStandard defaults to true with 4K off so the season count is
+          // unchanged, but an episode with no media is not available.
           if (
             episodeDetails &&
             episode.index != null &&
+            versions.length > 0 &&
             (hasStandard || has4k)
           ) {
             episodeDetails.push({
