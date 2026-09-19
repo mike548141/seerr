@@ -81,6 +81,16 @@ Object.defineProperty(TheMovieDb.prototype, 'getTvShow', {
   configurable: true,
 });
 
+// The scanner reads shows through the scan-tier lookup (#3367); without this
+// mock the tests reach the live TMDB API and get its seasons, not the fixture's.
+Object.defineProperty(TheMovieDb.prototype, 'getTvShowForScan', {
+  get() {
+    return async (args: { tvId: number }) => getTvShowImpl(args);
+  },
+  set() {},
+  configurable: true,
+});
+
 import { plexFullScanner } from '@server/lib/scanners/plex';
 
 setupTestDb();
